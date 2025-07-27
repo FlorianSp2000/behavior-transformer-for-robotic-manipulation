@@ -1,28 +1,32 @@
-# Behavior Transformers BeT on PushT Manipulation Task
+# Behavior Transformer (BeT) for PushT Robotic Manipulation
 
 This repository contains an implementation of the Behavior Transformer (BeT) for the PushT robotic manipulation task, built using the LeRobot framework as part of a coding challenge.
 
 ## Results
 
 ### Qualitative Results: Agent Rollouts
-Below are sample rollouts after 25,000 training steps comparing our BeT implementation to VQ-BeT and Diffusion Policy baselines, which were already integrated in LeRobot.
+Sample rollouts comparing BeT to baseline methods. All models were trained for 25,000 training steps if not specified differently and evaluated on the same episode
 
-| BeT | VQ-BeT | Diffusion Policy |
+| BeT | BeT (30k) | VQ-BeT | Diffusion Policy |
 |:---:|:---:|:---:|
-| ![BeT Rollout](./media/eval_bet.gif) | ![VQ-BeT Rollout](./media/eval_vqbet.gif) | ![Diffusion Policy Rollout](./media/eval_diffusion.gif) |
+| ![BeT Rollout](./media/eval_bet.gif) | ![BeT (30k) Rollout](./media/eval_bet_st30k.gif) | ![VQ-BeT Rollout](./media/eval_vqbet.gif) | ![Diffusion Policy Rollout](./media/eval_diffusion.gif) |
+
+All those models apart from BeT (30k) were trained using the the training script lerobot/scripts/train.py. Interestingly, when training the BeT model using our train.ipynb the performance becomes notably better. The largest (known) difference should come from the different learning rate (schedule). Our training code used Adam with constant lr=1e-4 and a offset_loss_multiplier of 1000 while the training script was run with different offset_loss_multiplier values and learning rate 3e-4 with warum up phase and cosine schedule and weight decay.
+
+In the following the results all refer to BeT (30k).
+
+![Model Trajectories](./plots/model_trajectory_comparison.png)
+
+The kMeans clustering of our model in the PushT action space:
+
+![Model Trajectories](./plots/model_clustering.png)
 
 ---
 
-### Performance Metrics
-The primary metric is the **Success Rate**, where an episode is a success if the block achieves at least 95% overlap with the target area. All policies were trained for 25k steps.
+### Quantitative Results
+The primary metric is the **Success Rate**, where an episode is a success if the block achieves at least 95% overlap with the target area. The evaluation of each policy for 500 episodes:
 
-| Policy | Success Rate |
-| :--- | :---: |
-| **BeT (Our Implementation)** | **XX.X%** |
-| VQ-BeT (Baseline) | XX.X% |
-| Diffusion Policy (Baseline)| XX.X% |
-
-*(Note: Please fill in the success rates from your evaluation runs.)*
+![Model Comparison](./plots/model_comparison.png)
 
 ---
 
@@ -63,14 +67,18 @@ Our BeT policy is implemented in lerobot/policies/bet/ following the LeRobot fra
 
 - Action Discretization: We use k-means clustering to discretize the continuous action space. The k-means fitting process runs automatically for the first kmeans_fit_steps of training, collecting actions from the dataset to build the clusters.
 
-- Normalization & Loss: The implementation uses min-max normalization for observations and actions. The total loss is a weighted sum of Focal Loss for the classification task and MSE Loss for the offset regression, as described in the original paper. (TODO: add link https://arxiv.org/pdf/2206.11251)
+- Normalization & Loss: The implementation uses min-max normalization for observations and actions. The total loss is a weighted sum of Focal Loss for the classification task and MSE Loss for the offset regression, as described in the [original paper](https://arxiv.org/pdf/2206.11251).
 
 
 ### Design choices and Challenges 
-
+Challenges: balancing classification loss & regression loss, 
+- one pitfall was not saving fitted kmeans cluster with torch module, when reloading it would silently reinitialize all clusters
+- choosing correct number of clusters, too few clusters would lead to systematic biases (offset learns to tilt left / higher negative values) while larger number of clusters leads to larger computational load
+- I chose to stick to ResNet-18 backbone and minGPT transformer so comparison against VQ-BeT highlights most important difference, which is in action discretization method
+- Kept action chunking and set action chunking size to 1 for compatibility. Also took over the default delta observation steps, i.e. our model would receive n_obs_steps=5 observations per time step and n_action_pred_token=3 for number of action tokens. 
 
 ### Future Improvements
-
+- More rigorous / systematic approach to finetune: offset loss weight, learning rate (schedule), number of kMeans cluster. Also right now kMeans cluster is naive (just pick random points), we could use something more sophisticated (kMeans++ e.g.). Furthermore, longer training times (model did not converge), larger architecture (scale up GPT backbone with more attention layers, longer context windows) etc.. Especially for BeT implementation, adding goal-conditioning would probably improve performance on given task.
 
 ### Dataset: PushT Environment
 
@@ -100,6 +108,14 @@ Shell scripts are provided to run training and evaluation. Edit the scripts to c
 3. Evaluate models: `sbatch bet_eval.sbatch`
 
 Results saved to `outputs/train/` and `outputs/eval/` by default. Modify output paths in scripts as needed.
+
+The creation of most plots can be seen in exploration.ipynb.
+
+The model comparison plot was created running:
+
+```
+python plot_results.py --base_path=outputs/eval
+```
 
 ---
 

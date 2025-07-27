@@ -1,5 +1,7 @@
 local_data_dir/
-outputs/
+outputs/train
+outputs/videos_wandb
+*.mp4
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
