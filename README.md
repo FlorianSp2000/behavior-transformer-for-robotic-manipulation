@@ -1,6 +1,6 @@
 # Behavior Transformer (BeT) for PushT Robotic Manipulation
 
-This repository implements the **Behavior Transformer (BeT)** method from the paper ["Behavior Transformers: Cloning k modes with one stone"](https://arxiv.org/pdf/2206.11251) for the PushT robotic manipulation task using the LeRobot framework as part of a coding challenge.
+This repository implements the **Behavior Transformer (BeT)** method from the paper ["Behavior Transformers: Cloning k modes with one stone"](https://arxiv.org/pdf/2206.11251) for the PushT robotic manipulation task using the LeRobot framework as part of an AI coding challenge.
 
 ### Task Overview
 
@@ -19,13 +19,13 @@ Sample rollouts comparing BeT to baseline methods. All models were trained for 2
 |:---:|:---:|:---:|:---:|
 | ![BeT Rollout](./media/eval_bet.gif) | ![BeT (30k) Rollout](./media/eval_bet_st30k.gif) | ![VQ-BeT Rollout](./media/eval_vqbet.gif) | ![Diffusion Policy Rollout](./media/eval_diffusion.gif) |
 
-All those models apart from BeT (30k) were trained using the the training script [`lerobot/scripts/train.py`](https://github.com/FlorianSp2000/lerobot/tree/bet-integration/src/lerobot/scripts/train.py). Interestingly, when training the BeT model using our [`train.ipynb`](train.ipynb) the performance becomes notably better. The largest (known) difference should come from the different learning rate (schedule). Our training code used Adam with constant lr=1e-4 and a offset_loss_multiplier of 1000 while the training script was run with different offset_loss_multiplier values and learning rate 3e-4 with warm up phase and cosine schedule and weight decay.
+All those models apart from BeT (30k) were trained using the training script [`lerobot/scripts/train.py`](https://github.com/FlorianSp2000/lerobot/tree/bet-integration/src/lerobot/scripts/train.py). Interestingly, when training the BeT model using our [`train.ipynb`](train.ipynb) the performance becomes notably better. The largest (known) difference should come from the different learning rate (schedule). Our training code used Adam with constant lr=1e-4 and a offset_loss_multiplier of 1000 while the training script was run with different offset_loss_multiplier values and learning rate 3e-4 with warmup phase, cosine schedule and weight decay.
 
 In the following the results all refer to BeT (30k).
 
 ![Model Trajectories](./plots/model_trajectory_comparison.png)
 
-The kMeans clustering of our model in the PushT action space and its utilization when running a couple of batches through it:
+The k-means clustering of our model in the PushT action space and its utilization when running a couple of batches through it:
 
 ![Model Trajectories](./plots/model_clustering.png)
 
@@ -51,7 +51,7 @@ git clone --recursive https://github.com/FlorianSp2000/behavior-transformer-for-
 
 ```
 # Create a virtual environment with Python 3.10 and activate it
-cd lerobot
+cd behavior-transformer-for-robotic-manipulation/lerobot
 conda create -y -n lerobot python=3.10
 conda activate lerobot
 ```
@@ -71,17 +71,17 @@ wandb login
 ### Implementation Details
 Our BeT policy is implemented in lerobot/policies/bet/ following the LeRobot framework's conventions.
 
-- Architecture: The model uses a ResNet-18 vision backbone and a minGPT transformer with causal self-attention, matching the approach in the VQ-BeT baseline. The method uses state tokens (joint positions are passed through its own MLP) and a special learnable vector called action_token is created. The transformer has one MLP prediction head for action bin classification and residual offset prediction.
+- Architecture: The model uses a ResNet-18 vision backbone and a minGPT transformer with causal self-attention, matching the approach in the VQ-BeT baseline. The method uses state tokens (joint positions are passed through their own MLP) and a special learnable vector called action_token is created. The transformer has one MLP prediction head for action bin classification and residual offset prediction.
 
 - Action Discretization: We use k-means clustering to discretize the continuous action space. The k-means fitting process runs automatically for the first kmeans_fit_steps of training, collecting actions from the dataset to build the clusters.
 
-- Normalization & Loss: The implementation uses min-max normalization for observations and actions. The total loss is a weighted sum of Focal Loss for the classification task and MSE Loss for the offset regression, as described in the [original paper](https://arxiv.org/pdf/2206.11251).
+- Normalization & Loss: The implementation uses min-max normalization for observations and actions. The total loss is a weighted sum of the Focal Loss for the classification task and MSE Loss for the offset regression, as described in the [original paper](https://arxiv.org/pdf/2206.11251).
 
 
-### Design choices and Challenges 
+### Design Choices and Challenges 
 **Loss Balancing**
 - *Problem*: Classification loss dominated, leading to poor continuous control
-- *Solution*: Increased offset loss weight from 0.1 gradually to 10000, finding best results with 1000-10000
+- *Solution*: Increased offset loss weight from 0.1 gradually to 10,000, finding the best results around 1000-10000
 
 **Cluster Persistence** 
 - *Problem*: K-means clusters not saved with model checkpoints, causing silent reinitialization
@@ -91,14 +91,14 @@ Our BeT policy is implemented in lerobot/policies/bet/ following the LeRobot fra
 - *Problem*: Too few clusters led to asymmetric action distribution and negative offset bias
 - *Solution*: Balanced cluster count (~50) 
 
-Furthermore, I chose to stick to ResNet-18 backbone and minGPT transformer so comparison against VQ-BeT highlights most important architectural difference, which is in action discretization method. I kept action chunking and set action chunking size to 1 for compatibility. Also took over the default delta observation steps, i.e. our model would receive n_obs_steps=5 observations per time step and n_action_pred_token=3 for number of action tokens. 
+Furthermore, I chose to stick to ResNet-18 backbone and minGPT transformer so comparison against VQ-BeT highlights the most important architectural difference, which is in the action discretization method. I kept action chunking and set action chunking size to 1 for compatibility. I also adopted the default delta observation steps, i.e. our model would receive n_obs_steps=5 observations per time step and n_action_pred_token=3 for number of action tokens. 
 
 ### Future Improvements
 1. **Systematic Hyperparameter Tuning**: Grid search over offset weights, cluster counts, and LR schedules
 2. **Advanced Clustering**: Replace naive k-means with k-means++ initialization or learned clustering
 3. **Architecture Scaling**: Larger transformers with more layers and longer context windows
 4. **Goal Conditioning**: Add target-aware conditioning for better task performance
-5. **Longer Training Duration**: Models did not converge within 30k steps (the checkpoints available on HuggingFace for VG-BeT and Diffusion Policy were run for more than ~200k steps)
+5. **Longer Training Duration**: Models did not converge within 30k steps (the checkpoints available on HuggingFace for VQ-BeT and Diffusion Policy were run for more than ~200k steps)
  
 ## 🐳 Cluster Usage
 
