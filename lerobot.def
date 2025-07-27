@@ -1,0 +1,45 @@
+Bootstrap: docker
+From: nvidia/cuda:12.1.1-cudnn8-devel-ubuntu22.04
+
+%files
+    # Copy your local directory (including cloned lerobot repo) into container
+    external/bet /bet
+
+%post
+    # Install system dependencies (including ffmpeg as per GitHub instructions)
+    apt-get update && apt-get install -y \
+        git wget \
+        libgl1-mesa-glx libosmesa6-dev \
+        python3.10 python3.10-venv python3-pip \
+        build-essential \
+        ffmpeg
+
+    # Create a virtual environment
+    python3.10 -m venv /opt/lerobot
+    
+    # Activate and upgrade pip
+    . /opt/lerobot/bin/activate
+    pip install --upgrade pip setuptools wheel
+    
+    # Install PyTorch with CUDA support first
+    pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
+    
+    # Install lerobot from the copied source (following GitHub instructions)
+    cd /bet/lerobot
+    pip install -e .
+    pip install -e ".[pusht]"
+
+    # Install additional packages
+    pip install --no-cache-dir \
+        jupyter \
+        scikit-learn \
+        ipywidgets \
+        seaborn \
+        tqdm \
+        einops
+
+%environment
+    export PATH="/opt/lerobot/bin:$PATH"
+
+%runscript
+    echo "LeRobot environment container. Use 'exec' to run commands."
