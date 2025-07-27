@@ -19,7 +19,7 @@ Sample rollouts comparing BeT to baseline methods. All models were trained for 2
 |:---:|:---:|:---:|:---:|
 | ![BeT Rollout](./media/eval_bet.gif) | ![BeT (30k) Rollout](./media/eval_bet_st30k.gif) | ![VQ-BeT Rollout](./media/eval_vqbet.gif) | ![Diffusion Policy Rollout](./media/eval_diffusion.gif) |
 
-All those models apart from BeT (30k) were trained using the the training script lerobot/scripts/train.py. Interestingly, when training the BeT model using our train.ipynb the performance becomes notably better. The largest (known) difference should come from the different learning rate (schedule). Our training code used Adam with constant lr=1e-4 and a offset_loss_multiplier of 1000 while the training script was run with different offset_loss_multiplier values and learning rate 3e-4 with warum up phase and cosine schedule and weight decay.
+All those models apart from BeT (30k) were trained using the the training script [`lerobot/scripts/train.py`](lerobot/scripts/train.py). Interestingly, when training the BeT model using our [`train.ipynb`](train.ipynb) the performance becomes notably better. The largest (known) difference should come from the different learning rate (schedule). Our training code used Adam with constant lr=1e-4 and a offset_loss_multiplier of 1000 while the training script was run with different offset_loss_multiplier values and learning rate 3e-4 with warm up phase and cosine schedule and weight decay.
 
 In the following the results all refer to BeT (30k).
 
@@ -32,7 +32,7 @@ The kMeans clustering of our model in the PushT action space and its utilization
 ---
 
 ### Quantitative Results
-The primary metric is the **Success Rate**, where an episode is a success if the block achieves at least 95% overlap with the target area. The evaluation of each policy for 500 episodes:
+The evaluation of each policy for 500 episodes in the PushT gym env:
 
 ![Model Comparison](./plots/model_comparison.png)
 
