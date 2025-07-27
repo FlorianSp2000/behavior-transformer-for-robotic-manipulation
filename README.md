@@ -8,7 +8,7 @@ This repository contains an implementation of the Behavior Transformer (BeT) for
 Sample rollouts comparing BeT to baseline methods. All models were trained for 25,000 training steps if not specified differently and evaluated on the same episode
 
 | BeT | BeT (30k) | VQ-BeT | Diffusion Policy |
-|:---:|:---:|:---:|
+|:---:|:---:|:---:|:---:|
 | ![BeT Rollout](./media/eval_bet.gif) | ![BeT (30k) Rollout](./media/eval_bet_st30k.gif) | ![VQ-BeT Rollout](./media/eval_vqbet.gif) | ![Diffusion Policy Rollout](./media/eval_diffusion.gif) |
 
 All those models apart from BeT (30k) were trained using the the training script lerobot/scripts/train.py. Interestingly, when training the BeT model using our train.ipynb the performance becomes notably better. The largest (known) difference should come from the different learning rate (schedule). Our training code used Adam with constant lr=1e-4 and a offset_loss_multiplier of 1000 while the training script was run with different offset_loss_multiplier values and learning rate 3e-4 with warum up phase and cosine schedule and weight decay.
