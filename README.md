@@ -1,6 +1,6 @@
 # Behavior Transformer (BeT) for PushT Robotic Manipulation
 
-This repository contains an implementation of the Behavior Transformer (BeT) for the PushT robotic manipulation task, built using the LeRobot framework as part of a coding challenge.
+This repository implements the **Behavior Transformer (BeT)** method from the paper ["Behavior Transformers: Cloning k modes with one stone"](https://arxiv.org/pdf/2206.11251) for the PushT robotic manipulation task using the LeRobot framework as part of a coding challenge.
 
 ## Results
 
@@ -17,7 +17,7 @@ In the following the results all refer to BeT (30k).
 
 ![Model Trajectories](./plots/model_trajectory_comparison.png)
 
-The kMeans clustering of our model in the PushT action space:
+The kMeans clustering of our model in the PushT action space and its utilization when running a couple of batches through it:
 
 ![Model Trajectories](./plots/model_clustering.png)
 
@@ -63,7 +63,7 @@ wandb login
 ### Implementation Details
 Our BeT policy is implemented in lerobot/policies/bet/ following the LeRobot framework's conventions.
 
-- Architecture: The model uses a ResNet-18 vision backbone and a minGPT transformer, matching the approach in the VQ-BeT baseline. The transformer has one MLP prediction head for action bin classification and residual offset prediction.
+- Architecture: The model uses a ResNet-18 vision backbone and a minGPT transformer with causal self-attention, matching the approach in the VQ-BeT baseline. The transformer has one MLP prediction head for action bin classification and residual offset prediction.
 
 - Action Discretization: We use k-means clustering to discretize the continuous action space. The k-means fitting process runs automatically for the first kmeans_fit_steps of training, collecting actions from the dataset to build the clusters.
 
@@ -71,14 +71,26 @@ Our BeT policy is implemented in lerobot/policies/bet/ following the LeRobot fra
 
 
 ### Design choices and Challenges 
-Challenges: balancing classification loss & regression loss, 
-- one pitfall was not saving fitted kmeans cluster with torch module, when reloading it would silently reinitialize all clusters
-- choosing correct number of clusters, too few clusters would lead to systematic biases (offset learns to tilt left / higher negative values) while larger number of clusters leads to larger computational load
-- I chose to stick to ResNet-18 backbone and minGPT transformer so comparison against VQ-BeT highlights most important difference, which is in action discretization method
-- Kept action chunking and set action chunking size to 1 for compatibility. Also took over the default delta observation steps, i.e. our model would receive n_obs_steps=5 observations per time step and n_action_pred_token=3 for number of action tokens. 
+**Loss Balancing**
+- *Problem*: Classification loss dominated, leading to poor continuous control
+- *Solution*: Increased offset loss weight from 0.1 gradually to 10000, finding best results with 1000-10000
+
+**Cluster Persistence** 
+- *Problem*: K-means clusters not saved with model checkpoints, causing silent reinitialization
+- *Solution*: Used `register_buffer()` to properly save cluster centers and fitting status
+
+**Systematic Bias**
+- *Problem*: Too few clusters led to asymmetric action distribution and negative offset bias
+- *Solution*: Balanced cluster count (~50) 
+
+Furthermore, I chose to stick to ResNet-18 backbone and minGPT transformer so comparison against VQ-BeT highlights most important architectural difference, which is in action discretization method. I kept action chunking and set action chunking size to 1 for compatibility. Also took over the default delta observation steps, i.e. our model would receive n_obs_steps=5 observations per time step and n_action_pred_token=3 for number of action tokens. 
 
 ### Future Improvements
-- More rigorous / systematic approach to finetune: offset loss weight, learning rate (schedule), number of kMeans cluster. Also right now kMeans cluster is naive (just pick random points), we could use something more sophisticated (kMeans++ e.g.). Furthermore, longer training times (model did not converge), larger architecture (scale up GPT backbone with more attention layers, longer context windows) etc.. Especially for BeT implementation, adding goal-conditioning would probably improve performance on given task.
+1. **Systematic Hyperparameter Tuning**: Grid search over offset weights, cluster counts, and LR schedules
+2. **Advanced Clustering**: Replace naive k-means with k-means++ initialization or learned clustering
+3. **Architecture Scaling**: Larger transformers with more layers and longer context windows
+4. **Goal Conditioning**: Add target-aware conditioning for better task performance
+5. **Longer Training Duration**: Models did not converge within 30k steps (the checkpoints available on HuggingFace for VG-BeT and Diffusion Policy were run for more than ~200k steps)
 
 ### Dataset: PushT Environment
 
