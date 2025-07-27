@@ -2,6 +2,14 @@
 
 This repository implements the **Behavior Transformer (BeT)** method from the paper ["Behavior Transformers: Cloning k modes with one stone"](https://arxiv.org/pdf/2206.11251) for the PushT robotic manipulation task using the LeRobot framework as part of a coding challenge.
 
+### Task Overview
+
+**Task**: Push T-shaped object onto target area using robot end-effector
+- **Dataset**: 206 episodes (~25k frames) with 96×96 RGB images + robot state
+- **Action Space**: 2D continuous control (target position)
+- **Success criterion**: ≥95% block-target overlap
+
+
 ## Results
 
 ### Qualitative Results: Agent Rollouts
@@ -63,7 +71,7 @@ wandb login
 ### Implementation Details
 Our BeT policy is implemented in lerobot/policies/bet/ following the LeRobot framework's conventions.
 
-- Architecture: The model uses a ResNet-18 vision backbone and a minGPT transformer with causal self-attention, matching the approach in the VQ-BeT baseline. The transformer has one MLP prediction head for action bin classification and residual offset prediction.
+- Architecture: The model uses a ResNet-18 vision backbone and a minGPT transformer with causal self-attention, matching the approach in the VQ-BeT baseline. The method uses state tokens (joint positions are passed through its own MLP) and a special learnable vector called action_token is created. The transformer has one MLP prediction head for action bin classification and residual offset prediction.
 
 - Action Discretization: We use k-means clustering to discretize the continuous action space. The k-means fitting process runs automatically for the first kmeans_fit_steps of training, collecting actions from the dataset to build the clusters.
 
@@ -91,14 +99,6 @@ Furthermore, I chose to stick to ResNet-18 backbone and minGPT transformer so co
 3. **Architecture Scaling**: Larger transformers with more layers and longer context windows
 4. **Goal Conditioning**: Add target-aware conditioning for better task performance
 5. **Longer Training Duration**: Models did not converge within 30k steps (the checkpoints available on HuggingFace for VG-BeT and Diffusion Policy were run for more than ~200k steps)
-
-### Dataset: PushT Environment
-
-**Task**: Push T-shaped object onto target area using robot end-effector
-- 206 episodes, ~124 frames each at 10 FPS
-- 96×96 RGB images + robot joint positions/actions
-- Success criterion: ≥95% block-target overlap
-
  
 ## 🐳 Cluster Usage
 
